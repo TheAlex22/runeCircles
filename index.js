@@ -1,0 +1,136 @@
+const angleToRadian = (angle) => {
+  return angle * (Math.PI / 180)
+}
+
+let radiusOuter = 250
+let diameterOuter = radiusOuter * 2
+let radiusInner = radiusOuter / 2
+let diameterInner = radiusOuter 
+
+const outterCircle = document.getElementById('outterLayer')
+const innerCircle = document.getElementById('innerLayer')
+const innerSpacer = document.getElementById('spacerInner')
+const outterSpacer = document.getElementById('spacerOutter')
+const middleSpacer = document.getElementById('spacerMid')
+const colorPicker = document.getElementById('runeColor')
+const radiusPicker = document.getElementById('radiusRange')
+
+const originalTexts = new Map()
+
+window.addEventListener("load", () => {
+  
+  originalTexts.set(outterCircle, outterCircle.innerText)
+  originalTexts.set(innerCircle, innerCircle.innerText)
+  
+  renderAll()
+  console.log("page is fully loaded")
+})
+
+let radiusTimeout
+radiusPicker.addEventListener('input', () => {
+  clearTimeout(radiusTimeout)
+  radiusTimeout = setTimeout(()=>{
+    radiusOuter = parseInt(radiusPicker.value)
+    diameterOuter = radiusOuter * 2
+    radiusInner = radiusOuter / 2
+    diameterInner = radiusOuter
+    renderAll()
+  }, 50)
+})
+
+radiusPicker.addEventListener('change', () => {
+  clearTimeout(radiusTimeout)
+  radiusOuter = parseInt(radiusPicker.value)
+  diameterOuter = radiusOuter * 2
+  radiusInner = radiusOuter / 2
+  diameterInner = radiusOuter 
+  renderAll()
+})
+
+colorPicker.addEventListener('change', () => {
+  changeColor(colorPicker.value)
+})
+
+function renderAll() {
+  requestAnimationFrame(() => {
+    renderCircle(radiusOuter, diameterOuter, outterCircle)
+    renderCircle(radiusInner, diameterInner, innerCircle)
+    renderSpacer(diameterInner, innerSpacer)
+    renderSpacer(diameterOuter, middleSpacer)
+    renderSpacer(diameterOuter - 100, outterSpacer)
+  })
+}
+
+
+
+function renderCircle(radius, diameter, circle) {
+  const text = originalTexts.get(circle) || circle.innerText
+  circle.innerText = ''
+  circle.style.cssText = `
+  width: ${diameter}px;
+  height: ${diameter}px;
+  `
+  const characters = text.split('') 
+  const existingSpans = circle.querySelectorAll('span')
+  const fragment = document.createDocumentFragment()
+  
+
+  let angle = -90
+  const deltaAngle = 360 / characters.length
+
+  // Pre-calculating the angles for each letter
+  const positions = characters.map((char, index) =>{
+    const currentAngle = angle + (index * deltaAngle)
+    const radians = angleToRadian(currentAngle)
+    return {
+      char,
+      index,
+      x: radius * ( 1 + Math.cos(radians)),
+      y: radius * ( 1 + Math.sin(radians)),
+      rotation: index * deltaAngle
+    }
+  })
+
+
+
+  positions.forEach(({char, index, x, y, rotation}) =>{
+    const charElement = existingSpans[index] || document.createElement('span')
+    
+    if (charElement.innerText !== char) {
+      charElement.innerText = char
+    }
+    
+    const transform = `translate(${x}px, ${y}px) rotate(${rotation}deg)`
+
+    charElement.style.cssText = `
+    transform: ${transform}
+    `
+
+    if (!existingSpans[index]) {
+      fragment.appendChild(charElement)
+    }
+
+  })
+
+  const spansToRemove = Array.from(existingSpans).slice(characters.length)
+  spansToRemove.forEach(span => span.remove())
+
+  // Only append new elements
+  if (fragment.hasChildNodes()) {
+    circle.appendChild(fragment)
+  }
+}
+
+function renderSpacer(diameter, spacer) {
+  spacer.style.cssText = `
+  width: ${diameter}px;
+  height: ${diameter}px;
+  `
+}
+
+
+function changeColor(runeColor) {
+  const color = document.querySelector(':root')
+  color.style.setProperty('--color', runeColor)
+}
+
